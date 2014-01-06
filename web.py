@@ -9,11 +9,18 @@ class SiteMap(object):
     Represents the sitemap of a website
     """
 
-    def __init__(self, domain, debug=False):
+    def __init__(self, base_url, debug=False):
         """
         @ domain (str): domain from which this sitemap should be created
         """
-        self.domain = domain
+        # Do some input validation
+        url_split = urlsplit(base_url)
+        if len(url_split[0]) > 0 and len(url_split[1]) > 0:
+            # user entered http(s) and some domain
+            self.base_url = base_url
+        else:
+            raise IOError("Wrong URL format, please enter 'http(s)://domain.com'")
+
         self.pages = {} # create dictionary for pages already crawled
         self.debug = debug
         self.crawl_domain()
@@ -34,7 +41,7 @@ class SiteMap(object):
                 print "Warning: page already exists, skipping"
                 continue
 
-            curr_url = urljoin(self.domain, curr_path)
+            curr_url = urljoin(self.base_url, curr_path)
                 
             if self.debug:
                 print "Currently crawling: %s" % curr_url
@@ -49,7 +56,7 @@ class SiteMap(object):
             if response.status == 200 and \
                     "text/html" in response.headers['content-type']:
                 soup = BeautifulSoup(response.data, "lxml")
-                page = Page(self.domain, curr_path, soup)
+                page = Page(self.base_url, curr_path, soup)
 
                 for next_link_to_crawl in page.internal_hrefs:
                     if next_link_to_crawl in self.pages \
@@ -75,7 +82,7 @@ class Page(object):
     """
 
     def __init__(self, domain, url, content):
-        self.domain = domain
+        self.base_url = domain
         self.domain_netloc = urlsplit(domain)[1]
         self.url = url
         
@@ -90,13 +97,16 @@ class Page(object):
         for href_tag in content.find_all(href=True):
             href = href_tag['href'].lower() # all lowercase, just making sure
 
-            scheme, netloc, path, _, _ = urlsplit(href)
+            scheme, netloc, path, _, _ = urlsplit(href)              
     
             if len(scheme) > 0 and scheme in ('mailto', 'javascript', 'tel'):
                 continue # ignore
 
             if len(netloc) > 0 and netloc != self.domain_netloc:
                 continue # ignore external links
+
+            # make sure url has leading forward slash
+            path = "/" + path.lstrip('/')
 
             # get path, removing query and fragments
             href = urlunsplit(('', '', path, '', ''))
