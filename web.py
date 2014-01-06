@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup
-from urllib2 import urlopen, URLError
+import urllib3
 from lxml import etree
 from urlparse import urlsplit, urljoin, urlunsplit
 from collections import deque
@@ -18,14 +18,6 @@ class Page(object):
         self.internal_links = []
 
         self.crawl_page(content) # no need to store content for now
-
-        #@property
-        #def url(self):
-        #    return self.url
-
-        #@property
-        #def assets(self):
-        #    return self.assets
 
     def crawl_page(self, content):
 
@@ -75,6 +67,9 @@ class SiteMap(object):
         self.crawl_domain()
 
     def crawl_domain(self):
+
+        http = urllib3.PoolManager()
+
         urls_to_crawl = deque(['/'])
 
         while urls_to_crawl:
@@ -90,15 +85,13 @@ class SiteMap(object):
             print "Current url: %s" % curr_url
             # make request
             try:
-                response = urlopen(curr_url)
-            except URLError, e:
-                print "Could not open URL '%s', I am skipping this! (Error: '%s')" % (curr_url, e)
+                response = http.request('GET', curr_url)
+            except:
+                print "Could not get response from URL '%s', skipping this URL." % curr_url
                 continue
 
-            if response.getcode() == 200:
-
-                soup = BeautifulSoup(urlopen(curr_url).read(), "lxml")
-                # crawl page
+            if response.status == 200:
+                soup = BeautifulSoup(response.data, "lxml")
                 page = Page(self.domain, curr_path, soup)
 
                 for next_link_to_crawl in page.internal_links:
@@ -108,6 +101,10 @@ class SiteMap(object):
                     urls_to_crawl.append(next_link_to_crawl)
 
                 self.pages[curr_path] = page
+            else:
+                print "Received response with status '%s' from URL '%s', skipping this URL." % (response.status, curr_url)
+
+        print len(http.pools)
 
     def __str__(self):
         output_string = ['SiteMap (%d pages):\n' % len(self.pages)]
