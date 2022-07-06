@@ -3,7 +3,7 @@ argparse==1.2.1
 beautifulsoup4==4.3.2
 cssselect==0.9.1
 html5lib==0.999
-lxml==3.2.5
+lxml==4.9.1
 pyOpenSSL==0.13.1
 queuelib==1.1.1
 six==1.4.1
