@@ -1,4 +1,4 @@
-Twisted==13.2.0
+Twisted==22.10.0
 argparse==1.2.1
 beautifulsoup4==4.3.2
 cssselect==0.9.1
